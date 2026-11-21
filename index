@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#5547e8">
-<title>Delivery Order | ADM Priangan 2</title>
+<title>FORM ORDER | ADM Priangan 2</title>
 <style>
 :root{--brand:#5547e8;--brand2:#4034c9;--soft:#efedff;--bg:#f4f6fb;--text:#182235;--muted:#728096;--line:#e7eaf2;--green:#159b68;--shadow:0 12px 34px rgba(29,42,78,.07)}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 5% 0%,#ecebff 0,transparent 25rem),var(--bg);font-family:Inter,"Plus Jakarta Sans",system-ui,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased}button,input,select,textarea{font:inherit}button{touch-action:manipulation;cursor:pointer}
