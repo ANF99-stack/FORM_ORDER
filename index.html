@@ -23,10 +23,10 @@ header{position:sticky;top:0;z-index:20;background:#ffffffed;backdrop-filter:blu
 .stepbar{display:none}
 .main>.card h2{display:flex;align-items:center;gap:11px;font-size:16px;letter-spacing:-.2px;margin:0 0 6px}
 .main>.card h2:before{content:"";width:34px;height:34px;display:grid;place-items:center;flex:0 0 34px;border-radius:11px;background:#efedff;color:#5547e8;font-size:11px;font-weight:900}
-.main>.card:nth-child(1) h2:before{content:"01"}
-.main>.card:nth-child(2) h2:before{content:"02"}
-.main>.card:nth-child(3) h2:before{content:"03"}
-.main>.card:nth-child(4) h2:before{content:"04"}
+.main>.card:nth-child(2) h2:before{content:"01"}
+.main>.card:nth-child(3) h2:before{content:"02"}
+.main>.card:nth-child(4) h2:before{content:"03"}
+.main>.card:nth-child(5) h2:before{content:"04"}
 .sub{margin:0 0 17px 45px;font-size:11.5px}
 #searchMenu{max-width:100%;background:#fafbff}
 .category{padding:12px 0 14px}
@@ -111,9 +111,9 @@ body{padding-bottom:94px}
 
 <style>
 /* Separate menu and checkout views */
-body:not(.checkout-mode) .main>.card:not(:first-child){display:none}
-body.checkout-mode .main>.card:first-child{display:none}
-body.checkout-mode .main>.card:not(:first-child){display:block}
+body:not(.checkout-mode) .main>.card:not(:nth-child(1)):not(:nth-child(2)){display:none}
+body.checkout-mode .main>.card:nth-child(2){display:none}
+body.checkout-mode .main>.card:not(:nth-child(2)){display:block}
 body.checkout-mode #checkoutSection{scroll-margin-top:24px}
 .page-switch{display:flex;align-items:center;gap:8px;margin:0 0 14px}
 .page-switch button{border:1px solid #e1e5ef;background:#fff;color:#5a6477;border-radius:10px;padding:9px 12px;font-size:12px;font-weight:750}
@@ -124,11 +124,37 @@ body.checkout-mode #checkoutSection{scroll-margin-top:24px}
  body.checkout-mode #cart{max-height:170px}
 }
 </style>
+
+<style>
+/* Mobile cart summary: hide when empty, compact with items, full in checkout */
+@media(max-width:760px){
+  body.cart-empty:not(.checkout-mode) .cart-card{display:none}
+  body.cart-has-items:not(.checkout-mode) .cart-card{padding:12px 14px}
+  body.cart-has-items:not(.checkout-mode) .cart-card h2{font-size:13px;margin:0 0 7px}
+  body.cart-has-items:not(.checkout-mode) #cart{max-height:92px;overflow:auto}
+  body.cart-has-items:not(.checkout-mode) .cart-row{padding:7px 0}
+  body.cart-has-items:not(.checkout-mode) .cart-row strong{font-size:11px}
+  body.cart-has-items:not(.checkout-mode) .cart-row small{font-size:9px}
+  body.cart-has-items:not(.checkout-mode) .cart-card .total-row{padding:6px 0;font-size:11px}
+  body.cart-has-items:not(.checkout-mode) .cart-card .total-row.total{font-size:12px;padding-top:8px}
+  body.cart-has-items:not(.checkout-mode) .cart-card .total-row.total strong{font-size:16px}
+  body.cart-has-items:not(.checkout-mode) .cart-card .secondary,
+  body.cart-has-items:not(.checkout-mode) .cart-card .notice{display:none}
+  body.checkout-mode .cart-card{display:block}
+  body.checkout-mode #cart{max-height:260px}
+}
+</style>
+
 </head>
 <body>
 <header><div class="header-inner"><div class="logo">DO</div><div class="headtxt"><h1 id="brandTitle">Delivery Order</h1><small id="outletSubtitle">Memuat informasi outlet...</small></div><div class="status" id="statusBadge">● ONLINE</div></div></header>
 <div class="wrap">
 <main class="main">
+ <section class="card" id="outletSelectSection">
+  <h2>🏪 Pilih Outlet</h2><p class="sub">Pilih outlet tujuan pesanan. Menu, brand, dan metode pembayaran akan menyesuaikan outlet yang dipilih.</p>
+  <div class="field"><label>Outlet tujuan *</label><select id="outletSelect"><option value="">Memuat daftar outlet...</option></select></div>
+  <div id="outletSelectHint" class="notice">Daftar outlet sedang dimuat.</div>
+ </section>
  <section class="card">
   <div class="stepbar"><i class="step active"></i><i class="step"></i><i class="step"></i><i class="step"></i></div>
   <h2>🍽️ Pilih Menu</h2><p class="sub">Menu tersedia mengikuti outlet yang membuka halaman Delivery Order ini.</p>
@@ -182,7 +208,7 @@ body.checkout-mode #checkoutSection{scroll-margin-top:24px}
 'use strict';
 const $=id=>document.getElementById(id);
 const params=new URLSearchParams(location.search);
-const outletId=params.get('outlet')||params.get('id')||'';
+let outletId=params.get('outlet')||params.get('id')||'';
 const apiBase=params.get('api')||'';
 const outletToken=params.get('token')||'';
 const state={config:null,products:[],category:'Semua',cart:{},payment:'',busy:false};
@@ -196,7 +222,7 @@ function renderCategories(){const cats=['Semua',...new Set(state.products.map(p=
 function setCategory(c){state.category=c;renderCategories();renderMenus();}
 function renderMenus(){const q=$('searchMenu').value.toLowerCase();const rows=state.products.filter(p=>(state.category==='Semua'||(p.category||'Lainnya')===state.category)&&(p.name+' '+p.category).toLowerCase().includes(q));$('menus').innerHTML=rows.length?rows.map(p=>`<article class="product"><div class="product-icon">${p.image?`<img src="${esc(p.image)}" alt="">`:esc(p.icon||'🍽️')}</div><div class="product-info"><strong>${esc(p.name)}</strong><small>${esc(p.category||'Menu')}</small><div class="price">${rupiah(p.price)}</div></div><button class="add" onclick="changeQty(${JSON.stringify(String(p.id))},1)">+</button></article>`).join(''):'<div class="empty">Menu tidak ditemukan untuk outlet ini.</div>';}
 function changeQty(id,d){state.cart[id]=(state.cart[id]||0)+d;if(state.cart[id]<=0)delete state.cart[id];renderCart();}
-function renderCart(){const ids=Object.keys(state.cart);$('cart').innerHTML=ids.length?ids.map(id=>{const p=state.products.find(x=>String(x.id)===id);return `<div class="cart-row"><div><strong>${esc(p?.name||id)}</strong><small>${rupiah(p?.price)} × ${state.cart[id]}</small></div><div class="qty"><button onclick="changeQty(${JSON.stringify(id)},-1)">−</button><b>${state.cart[id]}</b><button onclick="changeQty(${JSON.stringify(id)},1)">+</button></div></div>`}).join(''):'<div class="empty">Belum ada menu dipilih</div>';$('itemCount').textContent=count();$('total').textContent=rupiah(total());$('checkoutTotal').textContent=rupiah(total());$('bottomCount').textContent=count();$('bottomLabel').textContent=count()?count()+' item dalam keranjang':'Keranjang masih kosong';$('bottomTotal').textContent=count()?'Total '+rupiah(total()):'Pilih menu untuk mulai memesan';$('bottomCart').setAttribute('aria-label',count()?'Buka checkout, '+count()+' item, total '+rupiah(total()):'Buka checkout');if(document.body.classList.contains('checkout-mode')){$('bottomAction').innerHTML='Kembali ke menu <span>‹</span>';$('bottomLabel').textContent='Checkout & pembayaran';$('bottomTotal').textContent=count()+' item · Total '+rupiah(total());}updateDP();}
+function renderCart(){const ids=Object.keys(state.cart);document.body.classList.toggle('cart-empty',ids.length===0);document.body.classList.toggle('cart-has-items',ids.length>0);$('cart').innerHTML=ids.length?ids.map(id=>{const p=state.products.find(x=>String(x.id)===id);return `<div class="cart-row"><div><strong>${esc(p?.name||id)}</strong><small>${rupiah(p?.price)} × ${state.cart[id]}</small></div><div class="qty"><button onclick="changeQty(${JSON.stringify(id)},-1)">−</button><b>${state.cart[id]}</b><button onclick="changeQty(${JSON.stringify(id)},1)">+</button></div></div>`}).join(''):'<div class="empty">Belum ada menu dipilih</div>';$('itemCount').textContent=count();$('total').textContent=rupiah(total());$('checkoutTotal').textContent=rupiah(total());$('bottomCount').textContent=count();$('bottomLabel').textContent=count()?count()+' item dalam keranjang':'Keranjang masih kosong';$('bottomTotal').textContent=count()?'Total '+rupiah(total()):'Pilih menu untuk mulai memesan';$('bottomCart').setAttribute('aria-label',count()?'Buka checkout, '+count()+' item, total '+rupiah(total()):'Buka checkout');if(document.body.classList.contains('checkout-mode')){$('bottomAction').innerHTML='Kembali ke menu <span>‹</span>';$('bottomLabel').textContent='Checkout & pembayaran';$('bottomTotal').textContent=count()+' item · Total '+rupiah(total());}updateDP();}
 function goToCheckout(){if(!count()){alert('Pilih menu terlebih dahulu sebelum checkout.');$('searchMenu').focus();return;}document.body.classList.add('checkout-mode');$('bottomAction').innerHTML='Kembali ke menu <span>‹</span>';$('bottomLabel').textContent='Checkout & pembayaran';$('bottomTotal').textContent=count()+' item · Total '+rupiah(total());window.scrollTo({top:0,behavior:'smooth'});}
 function showMenuPage(){document.body.classList.remove('checkout-mode');$('bottomAction').innerHTML='Checkout <span>›</span>';$('bottomLabel').textContent=count()?count()+' item dalam keranjang':'Keranjang masih kosong';$('bottomTotal').textContent=count()?'Total '+rupiah(total()):'Pilih menu untuk mulai memesan';window.scrollTo({top:0,behavior:'smooth'});}
 function toggleCheckoutPage(){if(document.body.classList.contains('checkout-mode'))showMenuPage();else goToCheckout();}
@@ -208,8 +234,14 @@ function updateProofRequirement(){const required=proofRequired();$('proofRequire
 function validateReady(){const t=total(),dp=Number($('dpAmount').value||0),proofOk=!proofRequired()||!!$('proof').files[0];const ok=!!outletId&&!!apiBase&&count()>0&&$('customer').value.trim()&&$('phone').value.trim()&&$('address').value.trim()&&$('needDate').value&&$('needTime').value&&state.payment&&dp>0&&dp<=t&&proofOk&&!state.busy;$('submitBtn').disabled=!ok;}
 function fileData(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});}
 async function submitOrder(){validateReady();if($('submitBtn').disabled)return;const dp=Number($('dpAmount').value),t=total();if(dp>t){alert('Nominal DP tidak boleh melebihi total pesanan.');return;}const f=$('proof').files[0];if(proofRequired()&&!f){alert('Untuk pembayaran Transfer atau QRIS, wajib upload bukti pembayaran DP.');return;}if(f&&f.size>5*1024*1024){alert('Ukuran bukti pembayaran maksimal 5 MB.');return;}state.busy=true;$('submitBtn').textContent='Mengirim pesanan...';validateReady();try{const items=Object.entries(state.cart).map(([id,qty])=>{const p=state.products.find(x=>String(x.id)===id);return {productId:id,name:p?.name,price:Number(p?.price||0),qty,subtotal:Number(p?.price||0)*qty};});const proof=f?{data:await fileData(f),mimeType:f.type,name:f.name}:null;const body={action:'submitDeliveryOrder',outlet:outletId,token:outletToken,outletName:state.config?.outletName||'',brand:state.config?.brand||'',customer:$('customer').value.trim(),phone:$('phone').value.trim(),address:$('address').value.trim(),notes:$('notes').value.trim(),requestedDate:$('needDate').value,requestedTime:$('needTime').value,items,total:t,dpAmount:dp,remainingBalance:t-dp,dpPaymentMethod:state.payment,proof,checkoutAt:new Date().toISOString(),userAgent:navigator.userAgent};const res=await fetch(apiBase,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});const data=await res.json();if(!data.ok)throw new Error(data.message||'Pesanan gagal disimpan.');$('successInfo').innerHTML=`<b>Nomor DO:</b> ${esc(data.orderId||data.doNumber||'Terkirim')}<br><b>Outlet:</b> ${esc(state.config?.outletName||'Outlet')}<br><b>Total:</b> ${rupiah(t)}<br><b>DP:</b> ${rupiah(dp)}<br><b>Sisa:</b> ${rupiah(t-dp)}<br><b>Status:</b> Menunggu konfirmasi AE`;$('modal').classList.remove('hidden');}catch(e){alert('Pesanan gagal dikirim: '+e.message);console.error(e);}finally{state.busy=false;$('submitBtn').textContent='Kirim Delivery Order';validateReady();}}
-async function init(){if(!outletId){$('outletSubtitle').textContent='Tautan outlet tidak valid';$('menus').innerHTML='<div class="empty">ID outlet tidak ditemukan pada tautan. Gunakan tautan resmi dari User AE.</div>';return;}if(!apiBase){$('outletSubtitle').textContent='Mode tampilan lokal / API belum dipasang';$('menus').innerHTML='<div class="empty">Form siap. Tambahkan URL Web App GAS pada parameter api untuk memuat konfigurasi dan menu outlet.</div>';return;}try{const cfg=await apiGet('getDeliveryOrderPublicConfig');if(!cfg.ok)throw new Error(cfg.message||'Konfigurasi outlet tidak tersedia.');state.config=cfg.config||cfg;$('brandTitle').textContent=state.config.brand||'Delivery Order';$('outletSubtitle').textContent=state.config.outletName||'Outlet';$('outletInfo').textContent=(state.config.outletName||'Outlet')+' • '+(state.config.brand||'');const methods=state.config.paymentMethods||state.config.payments||{};const enabled=[];if(methods.cash||methods.CASH)enabled.push(['CASH','💵']);if(methods.transfer||methods.TRANSFER)enabled.push(['TRANSFER','🏦']);if(methods.qris||methods.QRIS)enabled.push(['QRIS','▦']);$('paymentChoices').innerHTML=enabled.length?enabled.map(([m,ico])=>`<button class="pay" data-method="${m}" onclick="selectPayment('${m}')"><span>${ico}</span><b>${m}</b></button>`).join(''):'<div class="empty">Metode pembayaran belum diatur oleh outlet.</div>';const prod=await apiGet('getDeliveryOrderProducts');if(!prod.ok)throw new Error(prod.message||'Menu gagal dimuat.');state.products=(prod.products||[]).filter(p=>p.active!==false).map((p,i)=>({id:p.id??p.productId??i,name:p.name??p.nama??p.title??'Menu',category:p.category??p.kategori??'Menu',price:Number(p.price??p.harga??0),icon:p.icon??'🍽️',image:p.image??p.photo??''}));renderCategories();renderMenus();$('statusBadge').textContent='● OUTLET AKTIF';}catch(e){$('menus').innerHTML=`<div class="empty">${esc(e.message)}</div>`;$('outletSubtitle').textContent='Gagal memuat konfigurasi';console.error(e);}}
-$('searchMenu').addEventListener('input',renderMenus);$('proof').addEventListener('change',validateReady);['customer','phone','address','needDate','needTime','dpAmount'].forEach(id=>$(id).addEventListener('input',()=>{if(id==='dpAmount')updateDP();else validateReady();}));$('needDate').min=new Date().toLocaleDateString('en-CA');updateProofRequirement();renderCart();init();
+function outletRows(data){const rows=data?.outlets||data?.data||data?.items||[];return Array.isArray(rows)?rows:[];}
+function outletValue(o){return String(o.outletCode??o.outletId??o.id??o.code??o.outlet??o.username??'');}
+function outletLabel(o){return String(o.outletName??o.name??o.resto??o.outlet??o.username??outletValue(o));}
+async function loadOutletList(){const data=await apiGet('getDeliveryOrderPublicOutlets');if(data.ok===false||data.status==='error')throw new Error(data.message||'Daftar outlet gagal dimuat.');const rows=outletRows(data);const sel=$('outletSelect');sel.innerHTML='<option value="">Pilih outlet tujuan</option>'+rows.map(o=>`<option value="${esc(outletValue(o))}">${esc(outletLabel(o))}</option>`).join('');if(outletId){sel.value=outletId;}if(!rows.length){$('outletSelectHint').textContent='Belum ada outlet Delivery Order aktif.';return;}if(outletId&&sel.value){$('outletSelectHint').textContent='Outlet terpilih dari tautan. Anda dapat menggantinya sebelum memilih menu.';}else{$('outletSelectHint').textContent='Pilih outlet terlebih dahulu untuk memuat menu dan pembayaran.';}}
+async function loadSelectedOutlet(){const selected=$('outletSelect').value;if(!selected){outletId='';state.config=null;state.products=[];state.cart={};$('menus').innerHTML='<div class="empty">Pilih outlet terlebih dahulu.</div>';$('categories').innerHTML='';$('paymentChoices').innerHTML='<div class="empty">Pilih outlet terlebih dahulu.</div>';$('brandTitle').textContent='Delivery Order';$('outletSubtitle').textContent='Pilih outlet tujuan';$('outletInfo').textContent='Outlet belum dipilih.';renderCart();return;}outletId=selected;state.cart={};state.products=[];state.category='Semua';$('menus').innerHTML='<div class="empty">Memuat menu outlet...</div>';$('paymentChoices').innerHTML='<div class="empty">Memuat metode pembayaran...</div>';renderCart();await loadOutletData();}
+async function loadOutletData(){const cfg=await apiGet('getDeliveryOrderPublicConfig');if(cfg.ok===false||cfg.status==='error')throw new Error(cfg.message||'Konfigurasi outlet tidak tersedia.');state.config=cfg.config||cfg;$('brandTitle').textContent=state.config.brand||'Delivery Order';$('outletSubtitle').textContent=state.config.outletName||'Outlet';$('outletInfo').textContent=(state.config.outletName||'Outlet')+' • '+(state.config.brand||'');const methods=state.config.paymentMethods||state.config.payments||{};const enabled=[];if(methods.cash||methods.CASH)enabled.push(['CASH','💵']);if(methods.transfer||methods.TRANSFER)enabled.push(['TRANSFER','🏦']);if(methods.qris||methods.QRIS)enabled.push(['QRIS','▦']);$('paymentChoices').innerHTML=enabled.length?enabled.map(([m,ico])=>`<button class="pay" data-method="${m}" onclick="selectPayment('${m}')"><span>${ico}</span><b>${m}</b></button>`).join(''):'<div class="empty">Metode pembayaran belum diatur oleh outlet.</div>';const prod=await apiGet('getDeliveryOrderProducts');if(prod.ok===false||prod.status==='error')throw new Error(prod.message||'Menu gagal dimuat.');state.products=(prod.products||[]).filter(p=>p.active!==false).map((p,i)=>({id:p.id??p.productId??i,name:p.name??p.nama??p.title??'Menu',category:p.category??p.kategori??'Menu',price:Number(p.price??p.harga??0),icon:p.icon??'🍽️',image:p.image??p.photo??''}));renderCategories();renderMenus();$('statusBadge').textContent='● OUTLET AKTIF';}
+async function init(){if(!apiBase){$('outletSubtitle').textContent='API belum dipasang';$('menus').innerHTML='<div class="empty">Tambahkan parameter api=URL_GAS pada tautan publik untuk memuat outlet dan menu.</div>';return;}try{if(!outletId){await loadOutletList();$('menus').innerHTML='<div class="empty">Pilih outlet tujuan untuk melihat menu.</div>';return;}await loadOutletList();if(!$('outletSelect').value){outletId='';$('menus').innerHTML='<div class="empty">Outlet pada tautan tidak ditemukan atau tidak aktif. Silakan pilih outlet dari daftar.</div>';return;}await loadOutletData();}catch(e){$('menus').innerHTML=`<div class="empty">${esc(e.message)}</div>`;$('outletSubtitle').textContent='Gagal memuat outlet';console.error(e);}}
+$('outletSelect').addEventListener('change',()=>loadSelectedOutlet().catch(e=>{alert(e.message);console.error(e);}));$('searchMenu').addEventListener('input',renderMenus);$('proof').addEventListener('change',validateReady);['customer','phone','address','needDate','needTime','dpAmount'].forEach(id=>$(id).addEventListener('input',()=>{if(id==='dpAmount')updateDP();else validateReady();}));$('needDate').min=new Date().toLocaleDateString('en-CA');updateProofRequirement();renderCart();init();
 </script>
 </body>
 </html>
