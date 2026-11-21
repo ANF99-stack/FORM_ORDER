@@ -168,8 +168,8 @@ body.checkout-mode .bottom-cart{display:none!important}
 .tracking-result{margin-top:14px}
 .tracking-status{display:inline-block;border-radius:99px;background:#efedff;color:var(--brand);padding:7px 11px;font-size:11px;font-weight:850}
 .tracking-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
-.tracking-meta div{background:#f8f9fd;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px}
-.tracking-meta small{display:block;color:var(--muted);font-size:10px;margin-bottom:4px}
+.tracking-meta div{white-space:normal;overflow-wrap:anywhere;background:#f8f9fd;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px}
+.tracking-meta b{white-space:pre-line}.tracking-meta small{display:block;color:var(--muted);font-size:10px;margin-bottom:4px}
 .tracking-history{list-style:none;margin:10px 0 0;padding:0}
 .tracking-history li{padding:10px 0;border-bottom:1px solid var(--line);font-size:12px}
 .tracking-history small{display:block;color:var(--muted);font-size:10px;margin-top:4px}
@@ -218,7 +218,7 @@ body.checkout-mode .bottom-cart{display:none!important}
   <div class="stepbar"><i class="step active"></i><i class="step active"></i><i class="step"></i><i class="step"></i></div>
   <div class="page-switch"><button type="button" onclick="showMenuPage()">← Kembali ke menu</button><span style="font-size:11px;color:var(--muted)">Checkout · Data & jadwal</span></div><h2>👤 Data Pemesan</h2><p class="sub">Isi data agar outlet dapat menghubungi dan menyiapkan pesanan.</p>
   <div class="grid2"><div class="field"><label>Nama pelanggan *</label><input id="customer" placeholder="Nama lengkap" autocomplete="name"></div><div class="field"><label>Nomor WhatsApp *</label><input id="phone" type="tel" placeholder="08xxxxxxxxxx" autocomplete="tel"></div></div>
-  <div class="field"><label>Tipe pesanan *</label><div class="order-type-grid"><label class="order-type-option"><input type="radio" name="orderType" value="PICKUP" checked><span><b>🏪 Ambil di resto (Pick up)</b><small>Pesanan diambil langsung di outlet.</small></span></label><label class="order-type-option"><input type="radio" name="orderType" value="DELIVERY"><span><b>🛵 Delivery</b><small>Pesanan diantarkan ke alamat tujuan.</small></span></label></div><button type="button" id="deliveryTrackBtn" class="secondary hidden" style="margin-top:10px;width:100%" onclick="openDeliveryTracking()">Lacak Pesanan</button></div>
+  <div class="field"><label>Tipe pesanan *</label><div class="order-type-grid"><label class="order-type-option" onclick="chooseOrderType('PICKUP')"><input type="radio" name="orderType" value="PICKUP" checked><span><b>🏪 Ambil di resto (Pick up)</b><small>Pesanan diambil langsung di outlet.</small></span></label><label class="order-type-option" onclick="chooseOrderType('DELIVERY')"><input type="radio" name="orderType" value="DELIVERY"><span><b>🛵 Delivery</b><small>Pesanan diantarkan ke alamat tujuan.</small></span></label></div><button type="button" id="deliveryTrackBtn" class="secondary hidden" style="margin-top:10px;width:100%" onclick="openDeliveryTracking()">Lacak Pesanan</button></div>
   <div class="field" id="addressField"><label id="addressLabel">Alamat / lokasi pesanan (opsional)</label><textarea id="address" placeholder="Isi jika diperlukan"></textarea><small id="addressHelp" style="font-size:10px;color:var(--muted)">Alamat tidak wajib untuk pesanan ambil di resto.</small></div>
   <div class="field"><label>Catatan pesanan</label><textarea id="notes" rows="2" placeholder="Contoh: sambal dipisah, tanpa es, dan lainnya"></textarea></div>
  </section>
@@ -234,7 +234,7 @@ body.checkout-mode .bottom-cart{display:none!important}
   <div id="paymentDetails" class="info-box hidden"></div>
   <div class="field"><label>Nominal DP (bebas ditentukan) *</label><input id="dpAmount" type="number" min="0" step="1000" placeholder="Masukkan nominal DP"></div>
   <div class="info-box"><div class="total-row"><span>Total pesanan</span><b id="checkoutTotal">Rp 0</b></div><div class="total-row"><span>DP dibayarkan</span><b id="dpDisplay">Rp 0</b></div><div class="total-row total"><span>Sisa pembayaran</span><strong id="remainingDisplay">Rp 0</strong></div></div>
-  <div class="field"><label>Bukti pembayaran DP <span id="proofRequiredLabel">(wajib untuk Transfer/QRIS)</span></label><input id="proof" type="file" accept="image/*"><small id="proofHelp" style="font-size:10px;color:var(--muted)">Wajib diunggah jika memilih Transfer atau QRIS. Format gambar, maksimum 5 MB.</small></div>
+  <div class="field" id="proofUploadField"><label>Bukti pembayaran DP <span id="proofRequiredLabel">(wajib untuk Transfer/QRIS)</span></label><input id="proof" type="file" accept="image/*"><small id="proofHelp" style="font-size:10px;color:var(--muted)">Wajib diunggah jika memilih Transfer atau QRIS. Format gambar, maksimum 5 MB.</small></div>
   <button class="primary" id="submitBtn" onclick="submitOrder()" disabled>Kirim Delivery Order</button>
   <div class="notice">Pesanan akan masuk ke User AE untuk diperiksa dan dikonfirmasi. Jadwal belum dianggap disetujui sebelum ada konfirmasi dari outlet.</div>
  </section>
@@ -293,7 +293,8 @@ function updateDP(){const t=total(),dp=Math.max(0,Number($('dpAmount').value||0)
 function selectPayment(method){state.payment=method;updateProofRequirement();document.querySelectorAll('.pay').forEach(b=>b.classList.toggle('selected',b.dataset.method===method));renderPaymentDetails();validateReady();}
 function renderPaymentDetails(){const d=$('paymentDetails'),c=state.config||{};let html='';if(state.payment==='TRANSFER'){const b=c.transfer||c.bank||{};html=`<b>Informasi Transfer</b><br>Bank: ${esc(b.bankName||b.bank||'Informasi bank belum tersedia')}<br>No. rekening: ${esc(b.accountNumber||b.account||'-')}<br>Atas nama: ${esc(b.accountName||b.holder||'-')}`;}else if(state.payment==='QRIS'){const q=c.qris||{};html=`<b>Pembayaran QRIS</b>${q.imageUrl?`<img src="${esc(q.imageUrl)}" alt="QRIS outlet">`:'<br>QRIS outlet belum tersedia.'}${q.name?`<br>${esc(q.name)}`:''}`;}else if(state.payment==='CASH'){html='<b>Pembayaran Cash</b><br>Silakan koordinasikan pembayaran DP tunai dengan outlet.';}d.innerHTML=html;d.classList.toggle('hidden',!html);}
 function proofRequired(){return state.payment==='TRANSFER'||state.payment==='QRIS';}
-function updateProofRequirement(){const required=proofRequired();$('proofRequiredLabel').textContent=required?'(wajib)':'(opsional)';$('proofHelp').textContent=required?'Wajib diunggah untuk metode '+state.payment+'. Format gambar, maksimum 5 MB.':'Bukti pembayaran dapat dilampirkan jika sudah tersedia. Format gambar, maksimum 5 MB.';$('proof').required=required;}
+function updateProofRequirement(){const required=proofRequired();const isCash=state.payment==='CASH';$('proofUploadField').classList.toggle('hidden',isCash);$('proofRequiredLabel').textContent=required?'(wajib)':'(opsional)';$('proofHelp').textContent=required?'Wajib diunggah untuk metode '+state.payment+'. Format gambar, maksimum 5 MB.':'Bukti pembayaran dapat dilampirkan jika sudah tersedia. Format gambar, maksimum 5 MB.';$('proof').required=required;if(isCash)$('proof').value='';}
+function chooseOrderType(value){const radio=document.querySelector('input[name="orderType"][value="'+value+'"]');if(!radio)return;radio.checked=true;state.orderType=value;updateOrderType();}
 function updateOrderType(){state.orderType=document.querySelector('input[name="orderType"]:checked')?.value||'PICKUP';const delivery=state.orderType==='DELIVERY';$('addressLabel').textContent=delivery?'Alamat pengantaran *':'Alamat / lokasi pesanan (opsional)';$('address').placeholder=delivery?'Alamat lengkap, patokan, atau nama gedung':'Isi jika diperlukan';$('addressHelp').textContent=delivery?'Alamat wajib diisi untuk pesanan Delivery.':'Alamat tidak wajib untuk pesanan ambil di resto.';$('deliveryTrackBtn').classList.toggle('hidden',!delivery);validateReady();}
 function validateReady(){const t=total(),dp=Number($('dpAmount').value||0),proofOk=!proofRequired()||!!$('proof').files[0],addressOk=state.orderType!=='DELIVERY'||!!$('address').value.trim();const ok=!!outletId&&!!apiBase&&count()>0&&$('customer').value.trim()&&$('phone').value.trim()&&addressOk&&$('needDate').value&&$('needTime').value&&state.payment&&dp>0&&dp<=t&&proofOk&&!state.busy;$('submitBtn').disabled=!ok;}
 function fileData(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});}
@@ -315,6 +316,21 @@ function finishCheckoutInfo(){
 }
 
 function openDeliveryTracking(){const panel=$('trackingPanel');panel.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>$('trackingOrderId').focus({preventScroll:true}),450);} 
+function formatOrderSchedule(dateValue,timeValue){
+ if(!dateValue&&!timeValue)return '-';
+ let dateText='Tanggal belum ditentukan';
+ if(dateValue){
+  const parts=String(dateValue).slice(0,10).split('-').map(Number);
+  if(parts.length===3&&parts.every(Number.isFinite)){
+   const d=new Date(parts[0],parts[1]-1,parts[2]);
+   const weekdays=['MINGGU','SENIN','SELASA','RABU','KAMIS','JUMAT','SABTU'];
+   const months=['JAN','FEB','MAR','APR','MEI','JUN','JUL','AGU','SEP','OKT','NOV','DES'];
+   dateText=weekdays[d.getDay()]+', '+String(parts[2]).padStart(2,'0')+' '+months[parts[1]-1]+' '+parts[0];
+  }
+ }
+ const time=String(timeValue||'').slice(0,5);
+ return dateText+(time?'\n'+time+' WIB':'');
+}
 function trackingDate(value){
  if(!value)return '-';
  const d=new Date(value);
@@ -337,7 +353,7 @@ async function trackOrder(orderId){
   const o=data.order;
   const history=Array.isArray(o.history)?o.history:[];
   const type=String(o.orderType||'').toUpperCase()==='DELIVERY'?'Delivery':'Ambil di resto (Pick up)';
-  const schedule=[o.requestedDate,o.requestedTime].filter(Boolean).join(' · ')||'-';
+  const schedule=formatOrderSchedule(o.requestedDate,o.requestedTime);
   $('trackingResult').innerHTML=`
    <div class="tracking-status">${esc(o.orderStatus||'Status belum tersedia')}</div>
    <div class="tracking-meta">
