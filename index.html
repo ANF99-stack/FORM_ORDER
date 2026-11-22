@@ -213,7 +213,7 @@ body.checkout-mode .bottom-cart{display:none!important}
  </section>
  <section class="card">
   <div class="stepbar"><i class="step active"></i><i class="step"></i><i class="step"></i><i class="step"></i></div>
-  <h2>🍽️ Pilih Menu</h2><p class="sub">Menu tersedia mengikuti outlet yang membuka halaman Delivery Order ini.</p>
+  <h2>🍽️ Pilih Menu</h2><p class="sub">Menu tersedia mengikuti outlet yang membuka FORM ORDER INI.</p>
   <input id="searchMenu" placeholder="Cari nama menu..." autocomplete="off">
   <div id="categories" class="category"></div>
   <div id="menus" class="menu-grid"><div class="empty">Memuat menu...</div></div>
@@ -239,7 +239,7 @@ body.checkout-mode .bottom-cart{display:none!important}
   <div class="field"><label>Nominal DP (bebas ditentukan) *</label><input id="dpAmount" type="number" min="0" step="1000" placeholder="Masukkan nominal DP"></div>
   <div class="info-box"><div class="total-row"><span>Total pesanan</span><b id="checkoutTotal">Rp 0</b></div><div class="total-row"><span>DP dibayarkan</span><b id="dpDisplay">Rp 0</b></div><div class="total-row total"><span>Sisa pembayaran</span><strong id="remainingDisplay">Rp 0</strong></div></div>
   <div class="field" id="proofUploadField"><label>Bukti pembayaran DP <span id="proofRequiredLabel">(wajib untuk Transfer/QRIS)</span></label><input id="proof" type="file" accept="image/*"><small id="proofHelp" style="font-size:10px;color:var(--muted)">Wajib diunggah jika memilih Transfer atau QRIS. Format gambar, maksimum 5 MB.</small></div>
-  <button class="primary" id="submitBtn" onclick="submitOrder()" disabled>Kirim Delivery Order</button>
+  <button class="primary" id="submitBtn" onclick="submitOrder()" disabled>Kirim Pesanan</button>
   <div class="notice">Pesanan akan masuk ke User AE untuk diperiksa dan dikonfirmasi. Jadwal belum dianggap disetujui sebelum ada konfirmasi dari outlet.</div>
  </section>
 </main>
