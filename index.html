@@ -276,6 +276,7 @@ if(!outletId&&persistedProgress?.outletId)outletId=String(persistedProgress.outl
 let lastSubmittedOrderId=String(persistedProgress?.lastSubmittedOrderId||'');
 let lastSubmittedPhone=String(persistedProgress?.lastSubmittedPhone||'');
 let trackingBusy=false;
+let completedRedirectTimer=null;
 let restoringProgress=false;
 function saveProgress(){if(restoringProgress)return;
  try{localStorage.setItem('DO_FORM_PROGRESS_V1',JSON.stringify({outletId,cart:state.cart,customer:$('customer')?.value||'',phone:$('phone')?.value||'',orderType:state.orderType,address:$('address')?.value||'',notes:$('notes')?.value||'',needDate:$('needDate')?.value||'',needTime:$('needTime')?.value||'',dpAmount:$('dpAmount')?.value||'',payment:state.payment,checkoutMode:document.body.classList.contains('checkout-mode'),trackingView:!$('trackingPage')?.classList.contains('hidden'),lastSubmittedOrderId,lastSubmittedPhone: $('trackingPhone')?.value||lastSubmittedPhone}));}catch(e){}
@@ -405,7 +406,28 @@ function finishCheckoutInfo(){
  if(lastSubmittedOrderId){ setTimeout(()=>trackOrder(lastSubmittedOrderId),350); } else { $('trackingOrderId').focus({preventScroll:true}); }
 }
 
-function openDeliveryTracking(){const panel=$('trackingPanel');panel.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>$('trackingOrderId').focus({preventScroll:true}),450);} 
+function openDeliveryTracking(){const panel=$('trackingPanel');panel.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>$('trackingOrderId').focus({preventScroll:true}),450);}
+function returnToMenuAfterCompleted(){
+ if(completedRedirectTimer){clearTimeout(completedRedirectTimer);completedRedirectTimer=null;}
+ $('trackingPage').classList.add('hidden');
+ document.querySelector('header')?.classList.remove('hidden');
+ document.querySelector('.wrap')?.classList.remove('hidden');
+ $('bottomCart')?.classList.remove('hidden');
+ document.body.classList.remove('checkout-mode');
+ // Bersihkan data pesanan yang sudah selesai agar scan ulang tidak membuka tracking lama.
+ state.cart={};state.payment='';
+ ['customer','phone','address','notes','needDate','needTime','dpAmount','trackingOrderId','trackingPhone'].forEach(id=>{if($(id))$(id).value='';});
+ if($('proof'))$('proof').value='';
+ lastSubmittedOrderId='';lastSubmittedPhone='';
+ $('trackingResult').innerHTML='';
+ $('trackingOrderInfo').innerHTML='<div><small>Nomor DO</small><b>-</b></div>';
+ $('trackingForm').reset();
+ renderCart();
+ showMenuPage();
+ saveProgress();
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+
 function parseOrderDate(value){
  if(value===null||value===undefined||value==='')return null;
  if(value instanceof Date){return Number.isNaN(value.getTime())?null:value;}
@@ -435,25 +457,23 @@ function formatOrderSchedule(dateValue,timeValue){
 }
 function trackingDate(value){
  if(value===null||value===undefined||value==='')return '-';
- const formatDateOnly=d=>new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Jakarta'}).format(d);
- const formatDateTime=d=>new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'Asia/Jakarta'}).format(d);
+ // Jangan mengubah nilai tanggal tanpa waktu menjadi pukul 00:00.
  if(typeof value==='string'){
   const raw=value.trim();
-  // Tanggal saja memang tidak memiliki jam; jangan mengarang 00:00.
   if(/^\d{4}-\d{2}-\d{2}$/.test(raw)){
    const d=parseOrderDate(raw);
-   return d?formatDateOnly(d):raw;
+   return d?d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):raw;
   }
-  // Parse timestamp lengkap langsung agar parseOrderDate tidak membuang bagian jam.
-  const d=new Date(raw);
-  return !Number.isNaN(d.getTime())&&d.getFullYear()>=1901?formatDateTime(d):raw;
+  // Timestamp ISO dengan waktu ditampilkan dalam zona waktu perangkat (WIB untuk pengguna Indonesia).
+  const d=parseOrderDate(raw);
+  return d?d.toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}):raw;
  }
  if(typeof value==='number'){
   const d=new Date(value);
-  return Number.isNaN(d.getTime())?String(value):formatDateTime(d);
+  return Number.isNaN(d.getTime())?String(value):d.toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
  }
- const d=value instanceof Date?value:new Date(value);
- return !Number.isNaN(d.getTime())&&d.getFullYear()>=1901?formatDateTime(d):String(value);
+ const d=parseOrderDate(value);
+ return d?d.toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}):String(value);
 }
 async function trackOrder(orderId,silent=false){
  const id=String(orderId||'').trim();
@@ -475,6 +495,10 @@ async function trackOrder(orderId,silent=false){
   if(!data.ok||!data.order)throw new Error(data.message||'Pesanan tidak ditemukan.');
   const o=data.order;
   const history=Array.isArray(o.history)?o.history:[];
+  // Saat pesanan selesai, tampilkan status terakhir sebentar lalu kembali ke menu.
+  if(String(o.orderStatus||'').trim().toUpperCase()==='SELESAI' && !completedRedirectTimer){
+   completedRedirectTimer=setTimeout(returnToMenuAfterCompleted,1800);
+  }
   const type=String(o.orderType||'').toUpperCase()==='DELIVERY'?'Delivery':'Ambil di resto (Pick up)';
   const schedule=formatOrderSchedule(o.requestedDate,o.requestedTime);
   $('trackingResult').innerHTML=`
