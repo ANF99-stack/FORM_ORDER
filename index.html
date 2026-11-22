@@ -434,7 +434,22 @@ function formatOrderSchedule(dateValue,timeValue){
  return dateText+(time?'\n'+time+' WIB':'');
 }
 function trackingDate(value){
- if(!value)return '-';
+ if(value===null||value===undefined||value==='')return '-';
+ // Jangan mengubah nilai tanggal tanpa waktu menjadi pukul 00:00.
+ if(typeof value==='string'){
+  const raw=value.trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw)){
+   const d=parseOrderDate(raw);
+   return d?d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):raw;
+  }
+  // Timestamp ISO dengan waktu ditampilkan dalam zona waktu perangkat (WIB untuk pengguna Indonesia).
+  const d=parseOrderDate(raw);
+  return d?d.toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}):raw;
+ }
+ if(typeof value==='number'){
+  const d=new Date(value);
+  return Number.isNaN(d.getTime())?String(value):d.toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
+ }
  const d=parseOrderDate(value);
  return d?d.toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}):String(value);
 }
@@ -663,7 +678,7 @@ async function init(){
   console.error(e);
  }
 }
-setInterval(()=>{if(!$('trackingPage').classList.contains('hidden')&&$('trackingOrderId').value.trim()&&$('trackingPhone').value.trim())trackOrder($('trackingOrderId').value,true);},20000);
+setInterval(()=>{if(!$('trackingPage').classList.contains('hidden')&&$('trackingOrderId').value.trim()&&$('trackingPhone').value.trim()&&!trackingBusy)trackOrder($('trackingOrderId').value,true);},3000);
 $('categories').addEventListener('click',e=>{const b=e.target.closest('button[data-category]');if(!b)return;e.preventDefault();e.stopPropagation();setCategory(b.dataset.category);});
 $('cart').addEventListener('click',e=>{const btn=e.target.closest('button[data-cart-qty][data-cart-id]');if(!btn)return;e.preventDefault();e.stopPropagation();changeQty(btn.dataset.cartId,Number(btn.dataset.cartQty));});
 $('menus').addEventListener('click',e=>{const add=e.target.closest('[data-add-id]');const card=e.target.closest('.product[data-product-id]');const id=add?.dataset.addId||card?.dataset.productId;if(!id)return;e.preventDefault();e.stopPropagation();changeQty(String(id),1);});
